@@ -95,24 +95,24 @@ def get_tables(url):
 
 
 def read_season_sched( season ):
-	url = "https://pro-football-reference.com/years/"+str(season)+"/games.htm"
-	print("Reading",url)
-	season_dict = {"":""}
-	tries = 1
-	while (tries < 5) and ( season_dict == {"":""} ):
-		season_dict = get_tables(url)
-		tries += 1
-		time.sleep(0.1) 
-	return season_dict
+    url = "https://pro-football-reference.com/years/"+str(season)+"/games.htm"
+    print("Reading",url)
+    season_dict = {"":""}
+    tries = 1
+    while (tries < 5) and ( season_dict == {"":""} ):
+        season_dict = get_tables(url)
+        tries += 1
+        time.sleep(0.1) 
+    return season_dict
 
 
 def read_game_page( gid ):
-	url = "http://pro-football-reference.com"+str(gid)
-	print("Trying to read"+url)
-	game_dict = {"":""}
-	tries = 1
-	while (tries < 5) and ( season_dict == {"":""} ):
-		game_dict = get_tables(url)
-		tries += 1
-		time.sleep(0.1)
-	return game_dict
+    url = "http://pro-football-reference.com"+str(gid)
+    print("Trying to read"+url)
+    game_dict = {"":""}
+    tries = 1
+    while (tries < 5) and ( season_dict == {"":""} ):
+        game_dict = get_tables(url)
+        tries += 1
+        time.sleep(0.1)
+    return game_dict

@@ -29,7 +29,11 @@ class pbp_drive():
 		# Cut off pieces of url before and after home team
 		self.offense = (str(possessor_logo).split(s))[1].split(e)[0].upper()
 		# Get result of the drive
-		self.result = header.find("span",{"class":"headline"}).contents
+		try:
+		    self.result = header.find("span",{"class":"headline"}).contents
+		except:
+			print("Couldn't parse drive result")
+			self.result = ""
 		# Get info about home/away score
 		home_info = header.find("span",{"class":"home"}).contents
 		self.home_team = home_info[0].contents[0]

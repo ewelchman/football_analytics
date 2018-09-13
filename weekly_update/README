@@ -1,0 +1,4 @@
+for the weekly update, do:
+python espn_update.py [season] [week]
+python espn_parseplays.py
+python espn_parsedrives.py
