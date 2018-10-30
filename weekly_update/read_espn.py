@@ -30,7 +30,10 @@ class pbp_drive():
 		self.offense = (str(possessor_logo).split(s))[1].split(e)[0].upper()
 		# Get result of the drive
 		try:
-		    self.result = header.find("span",{"class":"headline"}).contents
+			self.result = header.find("span",{"class":"headline"}).contents
+			if self.result == []:
+				print("found empty drive result",self.result)
+				self.result = [""]
 		except:
 			print("Couldn't parse drive result")
 			self.result = ""
@@ -145,9 +148,9 @@ def get_gameid(season,week):
 	# and dictionary for results
 	results = {}
 	for link in sched_page.find_all('a'):
-		if 'gameId=' in link.get('href'):
+		if 'gameId' in link.get('href'):
 			# Extract last bit of url listed
-			s = "gameId="
+			s = "gameId/"
 			this_game = link.get('href').split(s)[1]
 			gameids.append(this_game)
 			# And add text displayed to a dictionary

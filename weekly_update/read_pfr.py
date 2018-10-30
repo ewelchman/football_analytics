@@ -53,7 +53,7 @@ def read_table( html_tree,
                             rd[stat[0]] = ""
                                         
                 except:
-                    print("Couldn't parse cell")
+                    print("Couldn't parse a cell")
             
             
             # Add row dictionary to list of rows
@@ -108,10 +108,10 @@ def read_season_sched( season ):
 
 def read_game_page( gid ):
     url = "http://pro-football-reference.com"+str(gid)
-    print("Trying to read"+url)
+    print("Trying to read",url)
     game_dict = {"":""}
     tries = 1
-    while (tries < 5) and ( season_dict == {"":""} ):
+    while (tries < 5) and ( game_dict == {"":""} ):
         game_dict = get_tables(url)
         tries += 1
         time.sleep(0.1)
