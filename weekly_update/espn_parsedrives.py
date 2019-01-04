@@ -123,4 +123,5 @@ print("Determining whether home team has possession")
 parsed_df['home_poss'] = get_home_poss(parsed_df)
 
 # Write this new parsed drives DataFrame to new file
+print("Writing parsed drives")
 parsed_df.to_json(parseddrives_file)

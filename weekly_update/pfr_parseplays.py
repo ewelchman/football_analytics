@@ -9,7 +9,7 @@ boxscore_path = '/home/welced12/git/football_analytics/pfr_pages/boxscores'
 #gamelistpath = '/home/welced12/googledrive/nfl_data/devl/pfr_gamedata.json'
 gamelistpath = '/home/welced12/git/football_analytics/pfr_pages/pfr_gamedata.json'
 pbp_filename = '/home/welced12/googledrive/nfl_data/devl/pfr_parsedplays.csv'
-
+#pbp_filename = '/tmp/test_pfr_parsedplays.csv'
 
 def get_secs_rem(df):
     # Get column for seconds remaining
@@ -63,6 +63,7 @@ def parse_possession( game_page ):
     for i, (rc, plyrs, det) in enumerate(zip(df['rowclass'].values,
                                              df['detail_href'].values,
                                              df['detail_text'].values)):
+        det = str(det).lower()
         # If rowclass is divider or score (or previous row is oncell),
         # ball is probably controlled by team of first player mentioned
         if poss == []:  # First entry in play-by-play
@@ -74,22 +75,18 @@ def parse_possession( game_page ):
             # First player mentioned probably started with possession
             prev_rc = df.rowclass.values[i-1]
             plyr1 = plyrs.split(", ")[0].lower()
-            if (
-                ("divider" in str(rc)) or 
-                ("score" in str(rc)) or
-                ("onecell" in str(prev_rc))
-            ):
-                if plyr1 in home_plyrs:
-                    poss.append(home)
-                elif plyr1 in away_plyrs:
-                    poss.append(away)
-                else:
-                    #print("Couldn't match player",plyr1)
-                    poss.append(poss[-1])
-            elif det.split()[0].lower() == 'penalty':
+            
+            # If "No Play" and defensive pre-snap penalty in detail, 
+            # continue possession from previous play
+            if ("no play" in det) & ('offside' in det):
                 poss.append(poss[-1])
+                
+            elif plyr1 in home_plyrs:
+                poss.append(home)
+            elif plyr1 in away_plyrs:
+                poss.append(away)
             else:
-                # Just continue possession from previous play
+                #print("Couldn't match player",plyr1,"to a team")
                 poss.append(poss[-1])
     
     return poss
@@ -102,6 +99,30 @@ def get_defense( pbp_df ):
 
     defense = [home if off==away else away for off in poss]
     return defense
+
+
+def get_poss_changes( pbp_df ):
+    poss = pbp_df.poss.values
+    pc = []
+    for i, play in enumerate(poss[:-1]):
+        if play == poss[i+1]:
+            pc.append(False)
+        else:
+            pc.append(True)
+    pc.append(False)
+    return pc
+
+
+def get_turnovers( pbp_df ):
+    tos = [False for l in pbp_df.index]
+    poss_changes = pbp_df.poss_change.values
+    kickoffs = pbp_df.is_kickoff.values
+    fgs = pbp_df.is_fieldgoal.values
+    punts = pbp_df.is_punt.values
+    for i, (pc, kick, punt, fg) in enumerate(zip(poss_changes, kickoffs, punts, fgs)):
+        if ( pc and not (kick | punt | fg) ):
+            tos[i] = True
+    return tos
 
 
 def get_fieldposition( pbp_df ):
@@ -174,6 +195,20 @@ def found_fieldgoal(detail):
         return True
     return False
 
+def found_penalty(detail):
+	d = detail.lower()
+	if "penalty" in d:
+		return True
+	return False
+
+def found_kickoff(detail):
+    d = detail.lower()
+    kickoff_terms = ["kicks off", 'kickoff', 'onside kicks']
+    for kt in kickoff_terms:
+        if kt in d:
+            return True
+    return False
+
 def yds_run( detail ):
     words = detail.lower().split()
     # look for yardage in format "for X yards"
@@ -229,6 +264,7 @@ def parse_details(df):
     is_punt = [False for i in range(df_len)]
     is_fieldgoal = [False for i in range(df_len)]
     is_kickoff = [False for i in range(df_len)]
+    is_penalty = [False for i in range(df_len)]
     yds_gained = ['x' for i in range(df_len)]
     
     # Loop through details, use logic tree to classify plays
@@ -237,13 +273,12 @@ def parse_details(df):
             detail_plyrs) in enumerate(zip(df.down.values,
                                            df.detail_text.values,
                                            df.detail_href.values)):
+        detail_text = str(detail_text).lower()
         
         # Look for plays in downs 1-4
         if (str(down) != 'nan') and (str(down) != ''):
             
-            detail_text = str(detail_text).lower()
 #            print("parsing",detail_text)
-            
             # Try and classify the play and parse yards gained
             if found_scramble(detail_text):
                 is_scramble[i] = True
@@ -262,6 +297,13 @@ def parse_details(df):
                 
             elif found_fieldgoal(detail_text):
                 is_fieldgoal[i] = True
+
+        # Also check for kickoffs and penalties
+        elif found_kickoff(detail_text):
+            is_kickoff[i] = True
+    
+        if found_penalty(detail_text):
+            is_penalty[i] = True
     
     for i, yds in enumerate(yds_gained):
         if (is_run[i] or is_pass[i] or is_scramble[i]) and (yds != 'x'):
@@ -278,6 +320,8 @@ def parse_details(df):
     df['is_scramble'] = is_scramble
     df['is_punt'] = is_punt
     df['is_fieldgoal'] = is_fieldgoal
+    df['is_penalty'] = is_penalty
+    df['is_kickoff'] = is_kickoff
     df['yds_gained'] = yds_gained
                             
     return df
@@ -318,7 +362,32 @@ def read_success( df ):
             success.append('nan')
             
     return success
-                
+
+
+def get_home_score_before( df ):
+    scores = df.pbp_score_hm.shift(-1).values
+    scores[0] = 0
+    return scores
+
+def get_away_score_before( df ):
+    scores = df.pbp_score_aw.shift(-1).values
+    scores[0] = 0
+    return scores
+
+
+def get_off_lead( df ):
+    hm = df.home.values[0]
+    aw = df.away.values[0]
+    off_lead = [
+        0 if (score_hm in [hm,''])
+        else int(score_hm) - int(score_aw) if hm == off
+        else int(score_aw) - int(score_hm) if aw == off
+        else 0 for (off, score_hm, score_aw) in zip(
+            df.poss.values, df.score_b4_hm.fillna(0).values, df.score_b4_aw.fillna(0).values
+        )
+    ]
+    return off_lead
+ 
 
 # Parse play-by-play for one pfr page with tables in json format\
 def parse_pfr_pbp( game_page ):
@@ -343,8 +412,19 @@ def parse_pfr_pbp( game_page ):
     pbp_df['yds_to_go'] = clean_yds_to_go(pbp_df)
     # Parse seconds remaining
     pbp_df['secs_rem'] = get_secs_rem(pbp_df)
+    # Sort out score before and after the play
+    pbp_df['score_b4_hm'] = get_home_score_before(pbp_df)
+    pbp_df['score_b4_aw'] = get_away_score_before(pbp_df)
+    pbp_df.rename(
+        {'pbp_score_hm':'score_after_hm', 'pbp_score_aw':'score_after_aw'},
+        axis='columns', inplace=True
+    )
+    pbp_df['offense_lead'] = get_off_lead(pbp_df)
     # Parse details
     pbp_df = parse_details(pbp_df)
+    # Track possession changes and turnovers
+    pbp_df['poss_change'] = get_poss_changes(pbp_df)
+    pbp_df['is_turnover'] = get_turnovers(pbp_df)
     # Determine 'success' of plays
     pbp_df['success'] = read_success(pbp_df)
     
@@ -373,24 +453,26 @@ for i, gamefile in enumerate(gamepages[:]):
         g_dict = json.load(f)
 
     try:
+#        print(game_df.info())
         game_df = parse_pfr_pbp(g_dict)
         
-        # Add info about gid, season, week, and teams playing to pbp DF
-        gid = gamefile.rstrip('.json')
+        # Add info about season, week, unique ids for game and play
+        gid = gamefile.split('.')[0]
         bool_list = [True if (gid in str(link)) else False
                      for link in gamehist_df.boxscore_word_href.values]
         game_row = pd.DataFrame(gamehist_df[bool_list])
         
         game_df['gid'] = gid
+        game_df['pid'] = [gid+str(idx) for idx in game_df.index]
         game_df['season'] = game_row['season'].values[0]
         game_df['week']  = game_row['week_num'].values[0]
-        
-#        print(game_df.info())
+
         game_dfs.append(game_df)
         
         if i%100 == 0:
             print("Finished parsing",i,"games")
-    except:
+    except Exception as e:
+        print(e)
         pass
 
 

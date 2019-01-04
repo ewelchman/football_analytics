@@ -21,6 +21,7 @@ def update_json(filename, df):
 		print("Reading",filename)
 		read_df = pd.read_json(filename, convert_axes=False)
 		# Write new results on top of those from file
+		print("Updating DataFrame of plays")
 		for gid in df.index:
 			read_df.loc[gid] = df.loc[gid,:]
 	else:
