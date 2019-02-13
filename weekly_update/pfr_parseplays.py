@@ -11,6 +11,8 @@ gamelistpath = '/home/welced12/git/football_analytics/pfr_pages/pfr_gamedata.jso
 pbp_filename = '/home/welced12/googledrive/nfl_data/devl/pfr_parsedplays.csv'
 #pbp_filename = '/tmp/test_pfr_parsedplays.csv'
 
+debug_game = ''
+
 def get_secs_rem(df):
     # Get column for seconds remaining
     qtr = df['quarter'].values
@@ -128,7 +130,7 @@ def get_turnovers( pbp_df ):
 def get_fieldposition( pbp_df ):
     # Fieldposition from the offense's perspective
     off_fp = []
-    for off, loc in zip(pbp_df.poss.values, pbp_df.location.values):
+    for off, defense, loc in zip(pbp_df.poss.values, pbp_df['def'].values, pbp_df.location.values):
         if '50' in str(loc):
             off_fp.append(0)
         elif (
@@ -137,11 +139,15 @@ def get_fieldposition( pbp_df ):
         ):
             off_fp.append(0)
         elif len(loc) >= 4:
-            side = loc.split()[0]
+            side = loc.split()[0].lower()
+#            tmside = rp.three_letter_code[side.lower()+str(pbp_df.season.values[0])]
             ydline = int(loc.split()[1])
-            if side == off:
+            if off.lower() in rp.tlcs[side]:
                 # Offense is on own side of field. fieldpos is negative
                 off_fp.append( -1*(50-ydline) )
+            elif defense.lower() in rp.tlcs[side]:
+                #print(defense.lower(),rp.tlcs[side])
+                off_fp.append( 50-ydline )
             else:
                 # Offense is in opponent's territory
                 off_fp.append( 50-ydline )
@@ -403,11 +409,17 @@ def parse_pfr_pbp( game_page ):
     pbp_df['home'] = home
     pbp_df['away'] = away
 
+    if game_page['gid']==debug_game:
+        print("Home:",home,"- Away:",away)
     # Determine team on offense/defense
     pbp_df['poss'] = parse_possession( game_page )
     pbp_df['def'] = get_defense(pbp_df)
+    if game_page['gid']==debug_game:
+        print("Got defense")
     # Parse fieldposition from offense's perspective
     pbp_df['off_fieldpos'] = get_fieldposition(pbp_df)
+    if game_page['gid']==debug_game:
+        print("Got fieldposition")
     pbp_df['dist'] = pbp_df['yds_to_go'].values
     pbp_df['yds_to_go'] = clean_yds_to_go(pbp_df)
     # Parse seconds remaining
@@ -448,19 +460,22 @@ gamehist_df = pd.concat(season_dfs)
 #print(gamehist_df.info())
 
 game_dfs = []
+#for i, gamefile in enumerate(g for g in gamepages[:] if g.split('.')[0]==debug_game):
 for i, gamefile in enumerate(gamepages[:]):
     with open(os.path.join(boxscore_path,gamefile), 'r') as f:
         g_dict = json.load(f)
 
     try:
 #        print(game_df.info())
-        game_df = parse_pfr_pbp(g_dict)
-        
         # Add info about season, week, unique ids for game and play
         gid = gamefile.split('.')[0]
+        g_dict['gid'] = gid
         bool_list = [True if (gid in str(link)) else False
                      for link in gamehist_df.boxscore_word_href.values]
         game_row = pd.DataFrame(gamehist_df[bool_list])
+
+        # Parse json object for play-by-play
+        game_df = parse_pfr_pbp(g_dict)
         
         game_df['gid'] = gid
         game_df['pid'] = [gid+str(idx) for idx in game_df.index]
@@ -472,6 +487,7 @@ for i, gamefile in enumerate(gamepages[:]):
         if i%100 == 0:
             print("Finished parsing",i,"games")
     except Exception as e:
+        print("Failed to parse",gamefile)
         print(e)
         pass
 

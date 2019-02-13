@@ -6,6 +6,72 @@ import time
 import json
 import os
 
+
+# Make a dictionary to store what three-letter code each 
+# team used in a given season
+three_letter_code = {}
+# Most teams don't change, but some do
+tms = [
+    'atl','nor','car','tam','nyg','dal','phi','was',
+    'min','gnb','det','chi','sea','sfo','crd','ram',
+    'pit','cle','cin','rav','buf','nyj','mia','nwe',
+    'jax','htx','oti','clt','den','kan','rai','sdg',
+    'lac'
+]
+tlcs = {k:[k] for k in tms}
+tlcs['crd'].append('ari')
+tlcs['ram'].append('lar')
+tlcs['ram'].append('stl')
+tlcs['rav'].append('bal')
+tlcs['oti'].append('ten')
+tlcs['clt'].append('ind')
+tlcs['htx'].append('hou')
+tlcs['rai'].append('oak')
+tlcs['sdg'].append('lac')
+tlcs['lac'].append('sdg')
+for tm in tms:
+    for yr in range(2000,2019):
+        k = '{}{}'.format(tm,yr)
+        three_letter_code[k] = tm
+# Arizona Cardinals
+for yr in range(2000,2019):
+    k = 'crd{}'.format(yr)
+    three_letter_code[k] = 'ari'
+# St Louis Rams
+    # 2016-17 - lar
+    # 2000-15 - stl
+three_letter_code['ram2017'] = 'lar'
+three_letter_code['ram2016'] = 'lar'
+for yr in range(2000,2016):
+    k = 'ram{}'.format(yr)
+    three_letter_code[k] = 'stl'
+# Baltimore Ravens
+for yr in range(2000,2019):
+    k = 'rav{}'.format(yr)
+    three_letter_code[k] = 'bal'
+# Oilers/Titans
+for yr in range(2000,2019):
+    k = 'oti{}'.format(yr)
+    three_letter_code[k] = 'ten'
+# Indianapolis Colts
+for yr in range(2000,2019):
+    k = 'clt{}'.format(yr)
+    three_letter_code[k] = 'ind'
+# Texans
+for yr in range(2000,2019):
+    k = 'htx{}'.format(yr)
+    three_letter_code[k] = 'hou'
+# Raiders
+for yr in range(2000,2019):
+    k = 'rai{}'.format(yr)
+    three_letter_code[k] = 'oak'
+# Chargers
+three_letter_code['sdg2017'] = 'lac'
+for yr in range(2000,2018):
+    k = 'sdg{}'.format(yr)
+    three_letter_code[k] = 'sdg'
+
+
 def read_table( html_tree, 
                 tablename ):
     

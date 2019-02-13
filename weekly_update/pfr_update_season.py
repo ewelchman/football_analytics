@@ -31,8 +31,8 @@ if ('games' in season_dict.keys()) or ('all_games' in season_dict.keys()):
         print("Loaded existing games")
             
     # Update value for this particular season with new table
+    print("Updating game data from",year)
     games_dict[str(year)] = season_dict
-    print("Updated game data from",year)
     print("Writing game data to",datapath)
     
     # Write resulting overall dictionary to file
