@@ -96,8 +96,8 @@ def read_table( html_tree,
                 # Depending on cell contents, add cell to row dict
                 try:
                     txt = cell.xpath('./text()')
-                    a_text = cell.xpath('./a/text()')
-                    a_href = cell.xpath('./a/@href')
+                    a_text = [x.text for x in cell.findall(".//a")]
+                    a_href = [x.get("href") for x in cell.findall(".//a[@href]")]
                     stat = cell.xpath('./@data-stat')
                 
                     # Logic map for cell contents

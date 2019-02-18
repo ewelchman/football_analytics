@@ -178,7 +178,7 @@ def found_run(detail):
     run_terms = [
         "run ", "rush", "left tackle ","right tackle ",
         "up the middle ","middle for", "left end ", "right end ",
-        "left guard ", "right guard "
+        "left guard ", "right guard ", "kneel"
     ]
     if not "scramble" in d:
         for term in run_terms:
@@ -303,6 +303,14 @@ def parse_details(df):
                 
             elif found_fieldgoal(detail_text):
                 is_fieldgoal[i] = True
+
+            # Catch stuff that wasn't caught elsewhere
+            elif yds_run(detail_text) != 'x':
+                try:
+                    yds_gained[i] = yds_run(detail_text)
+                    is_run[i] = True
+                except:
+                    pass
 
         # Also check for kickoffs and penalties
         elif found_kickoff(detail_text):
